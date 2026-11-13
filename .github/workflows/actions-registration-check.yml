@@ -1,0 +1,19 @@
+name: Actions Registration Check
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/actions-registration-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm GitHub Actions is running
+        run: echo "GitHub Actions successfully detected and started this workflow."
