@@ -394,7 +394,7 @@ jobs:
         # An empty windows_iso_url means "ask Microsoft for a fresh link". The links
         # Microsoft hands out are signed and expire ~24h, so minting one at run time is
         # more reliable than pasting one in and hoping it is still alive.
-        if: ${{ github.event.inputs.windows_iso_url == '' }}
+        if: ${{ github.event_name == 'push' || inputs.windows_iso_url == '' }}
         shell: pwsh
         run: |
           $language = "${{ github.event_name == 'push' && 'English (United States)' || inputs.language }}"
@@ -424,7 +424,7 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "ISO_LANGUAGE=$($iso.Language)"
 
       - name: Use supplied Windows 11 ISO URL
-        if: ${{ github.event.inputs.windows_iso_url != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.windows_iso_url != '' }}
         shell: pwsh
         run: |
           Write-Output "A windows_iso_url was supplied - skipping auto-resolve."
@@ -1048,24 +1048,24 @@ jobs:
             | **Base** | Windows 11 ${{ github.event_name == 'push' && '26H2' || inputs.windows_version }} |
             | **Index** | ${{ github.event_name == 'push' && '1' || inputs.image_index }} |
             | **HAGS** | ${{ github.event_name == 'push' && 'on' || inputs.hags }} |
-            | **WinRE** | ${{ github.event.inputs.preserve_winre == 'true' && 'Preserved' || 'Removed (stub)' }} |
+            | **WinRE** | ${{ (github.event_name == 'push' && 'false' || inputs.preserve_winre) == 'true' && 'Preserved' || 'Removed (stub)' }} |
 
             ### ⚡ Applied in this build
             | Group | State |
             |-------|-------|
-            | AtlasOS-style power scheme | ${{ github.event.inputs.atlas_power_scheme == 'true' && '✅' || '❌' }} |
-            | CPU idle disabled (C-State 0) | ${{ github.event.inputs.disable_cpu_idle == 'true' && '✅' || '❌' }} |
-            | Security mitigations off | ${{ github.event.inputs.disable_security_mitigations == 'true' && '✅' || '❌' }} |
-            | Xbox / Gaming Services removed | ${{ github.event.inputs.remove_xbox_gaming_stack == 'true' && '✅' || '❌' }} |
-            | Background noise stripped | ${{ github.event.inputs.strip_background_noise == 'true' && '✅' || '❌' }} |
-            | Instant window open/close | ${{ github.event.inputs.instant_windows == 'true' && '✅' || '❌' }} |
-            | Fast Startup disabled | ${{ github.event.inputs.disable_fast_startup == 'true' && '✅' || '❌' }} |
-            | Network latency tweaks | ${{ github.event.inputs.network_latency_tweaks == 'true' && '✅' || '❌' }} |
-            | MPO disabled | ${{ github.event.inputs.disable_mpo == 'true' && '✅' || '❌' }} |
-            | Input latency tweaks | ${{ github.event.inputs.latency_input_tweaks == 'true' && '✅' || '❌' }} |
-            | Fullscreen Optimizations off | ${{ github.event.inputs.disable_fso == 'true' && '✅' || '❌' }} |
-            | Game Mode off | ${{ github.event.inputs.disable_game_mode == 'true' && '✅' || '❌' }} |
-            | Printing disabled | ${{ github.event.inputs.disable_printing == 'true' && '✅' || '❌' }} |
+            | AtlasOS-style power scheme | ${{ (github.event_name == 'push' && 'true' || inputs.atlas_power_scheme) == 'true' && '✅' || '❌' }} |
+            | CPU idle disabled (C-State 0) | ${{ (github.event_name == 'push' && 'true' || inputs.disable_cpu_idle) == 'true' && '✅' || '❌' }} |
+            | Security mitigations off | ${{ (github.event_name == 'push' && 'true' || inputs.disable_security_mitigations) == 'true' && '✅' || '❌' }} |
+            | Xbox / Gaming Services removed | ${{ (github.event_name == 'push' && 'true' || inputs.remove_xbox_gaming_stack) == 'true' && '✅' || '❌' }} |
+            | Background noise stripped | ${{ (github.event_name == 'push' && 'true' || inputs.strip_background_noise) == 'true' && '✅' || '❌' }} |
+            | Instant window open/close | ${{ (github.event_name == 'push' && 'true' || inputs.instant_windows) == 'true' && '✅' || '❌' }} |
+            | Fast Startup disabled | ${{ (github.event_name == 'push' && 'true' || inputs.disable_fast_startup) == 'true' && '✅' || '❌' }} |
+            | Network latency tweaks | ${{ (github.event_name == 'push' && 'true' || inputs.network_latency_tweaks) == 'true' && '✅' || '❌' }} |
+            | MPO disabled | ${{ (github.event_name == 'push' && 'true' || inputs.disable_mpo) == 'true' && '✅' || '❌' }} |
+            | Input latency tweaks | ${{ (github.event_name == 'push' && 'true' || inputs.latency_input_tweaks) == 'true' && '✅' || '❌' }} |
+            | Fullscreen Optimizations off | ${{ (github.event_name == 'push' && 'true' || inputs.disable_fso) == 'true' && '✅' || '❌' }} |
+            | Game Mode off | ${{ (github.event_name == 'push' && 'true' || inputs.disable_game_mode) == 'true' && '✅' || '❌' }} |
+            | Printing disabled | ${{ (github.event_name == 'push' && 'true' || inputs.disable_printing) == 'true' && '✅' || '❌' }} |
 
             ### ⚠️ Security Notice
             This image disables VBS / Memory Integrity, Credential Guard and the
@@ -1079,7 +1079,7 @@ jobs:
             - `C:\Windows\Tiny11Gaming\GAMING_PROFILE.md` — the exact list of what was changed
 
             ### ❌ What's Removed
-            ${{ github.event.inputs.preserve_winre != 'true' && '- **Windows Recovery Environment (WinRE)**' || '' }}
+            ${{ (github.event_name == 'push' && 'false' || inputs.preserve_winre) != 'true' && '- **Windows Recovery Environment (WinRE)**' || '' }}
             - **Windows Component Store (WinSxS)**
             - **Windows Update Service**
             - **Xbox / Gaming Services** (breaks Game Pass and Microsoft Store games)
@@ -1123,7 +1123,7 @@ jobs:
           - **Version:** ${{ github.event_name == 'push' && '26H2' || inputs.windows_version }}
           - **Type:** Core-Gaming (latency-first, AtlasOS-style)
           - **HAGS:** ${{ github.event_name == 'push' && 'on' || inputs.hags }}
-          - **WinRE:** ${{ github.event.inputs.preserve_winre == 'true' && 'Preserved' || 'Removed (stub)' }}
+          - **WinRE:** ${{ (github.event_name == 'push' && 'false' || inputs.preserve_winre) == 'true' && 'Preserved' || 'Removed (stub)' }}
 
           ## 📥 Download
           ${{ secrets.SF_SSH_KEY != '' && format('🔗 **SourceForge:** [{0}]({1})', env.ISO_NAME, env.SF_DOWNLOAD_URL) || '🔗 **GitHub Artifacts:** Available in workflow run' }}
