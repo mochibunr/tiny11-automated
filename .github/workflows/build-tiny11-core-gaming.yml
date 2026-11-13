@@ -16,6 +16,11 @@
 name: Build and Release Tiny11 Core-Gaming
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-tiny11-core-gaming.yml"
   workflow_dispatch:
     inputs:
       windows_version:
