@@ -230,9 +230,9 @@ jobs:
         run: |
           # ISO filename/tag are finalized later in "Verify tiny11 Core-Gaming ISO creation"
           $date = Get-Date -Format 'yyyy-MM-dd'
-          $version = "${{ github.event.inputs.windows_version }}"
+          $version = "${{ github.event_name == 'push' && '26H2' || inputs.windows_version }}"
 
-          $index = "${{ github.event.inputs.image_index }}"
+          $index = "${{ github.event_name == 'push' && '1' || inputs.image_index }}"
           $editions = @{
               "1" = "Home"
               "4" = "Education"
@@ -248,7 +248,7 @@ jobs:
           #   'Spanish (Mexico)'        -> 'SpanishMexico'
           # Keeping the qualifier matters - 'Spanish' and 'Spanish (Mexico)' are different
           # ISOs, and a bare 'Spanish' filename would make them indistinguishable.
-          $language = "${{ github.event.inputs.language }}" -replace '[^a-zA-Z0-9]', ''
+          $language = "${{ github.event_name == 'push' && 'English (United States)' || inputs.language }}" -replace '[^a-zA-Z0-9]', ''
 
           $folderName = "Tiny11CoreGaming-$edition-$version"
 
@@ -350,13 +350,13 @@ jobs:
             --webhook "$env:DISCORD_WEBHOOK" `
             --type build-started `
             --data (ConvertTo-Json @{
-              version = "${{ inputs.windows_version }}"
+              version = "${{ github.event_name == 'push' && '26H2' || inputs.windows_version }}"
               build_type = "Core-Gaming"
               edition = "$env:EDITION_NAME"
-              preserve_winre = "${{ inputs.preserve_winre }}"
-              enable_dotnet35 = "${{ inputs.enable_dotnet35 }}"
+              preserve_winre = "${{ github.event_name == 'push' && 'false' || inputs.preserve_winre }}"
+              enable_dotnet35 = "${{ github.event_name == 'push' && 'false' || inputs.enable_dotnet35 }}"
               gaming_profile = "core-gaming"
-              hags_mode = "${{ inputs.hags }}"
+              hags_mode = "${{ github.event_name == 'push' && 'on' || inputs.hags }}"
             } -Compress)
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_BUILDS }}
@@ -397,7 +397,7 @@ jobs:
         if: ${{ github.event.inputs.windows_iso_url == '' }}
         shell: pwsh
         run: |
-          $language = "${{ github.event.inputs.language }}"
+          $language = "${{ github.event_name == 'push' && 'English (United States)' || inputs.language }}"
           Write-Output "No ISO URL supplied - resolving a fresh link from Microsoft for '$language'..."
 
           try {
@@ -428,8 +428,8 @@ jobs:
         shell: pwsh
         run: |
           Write-Output "A windows_iso_url was supplied - skipping auto-resolve."
-          Add-Content -Path $env:GITHUB_ENV -Value "WINDOWS_ISO_URL=${{ github.event.inputs.windows_iso_url }}"
-          Add-Content -Path $env:GITHUB_ENV -Value "ISO_LANGUAGE=${{ github.event.inputs.language }}"
+          Add-Content -Path $env:GITHUB_ENV -Value "WINDOWS_ISO_URL=${{ github.event_name == 'push' && '' || inputs.windows_iso_url }}"
+          Add-Content -Path $env:GITHUB_ENV -Value "ISO_LANGUAGE=${{ github.event_name == 'push' && 'English (United States)' || inputs.language }}"
 
       - name: Preflight - validate Windows ISO URL
         shell: pwsh
@@ -622,41 +622,41 @@ jobs:
 
           $params = @{
             ISO = $env:ISO_DRIVE
-            INDEX = [int]"${{ github.event.inputs.image_index }}"
+            INDEX = [int]"${{ github.event_name == 'push' && '1' || inputs.image_index }}"
           }
 
-          if ("${{ github.event.inputs.skip_cleanup }}" -eq "true") {
+          if ("${{ github.event_name == 'push' && 'false' || inputs.skip_cleanup }}" -eq "true") {
             $params.SkipCleanup = $true
             Write-Output "Cleanup will be skipped (debugging mode)"
           }
 
-          $enableDotNet = [System.Boolean]::Parse("${{ github.event.inputs.enable_dotnet35 }}")
-          $preserveWinRE = [System.Boolean]::Parse("${{ github.event.inputs.preserve_winre }}")
-          $removeDefender = ("${{ github.event.inputs.remove_defender }}" -eq "true")
+          $enableDotNet = [System.Boolean]::Parse("${{ github.event_name == 'push' && 'false' || inputs.enable_dotnet35 }}")
+          $preserveWinRE = [System.Boolean]::Parse("${{ github.event_name == 'push' && 'false' || inputs.preserve_winre }}")
+          $removeDefender = ("${{ github.event_name == 'push' && 'false' || inputs.remove_defender }}" -eq "true")
 
-          $accountSetup = "${{ github.event.inputs.account_setup }}"
+          $accountSetup = "${{ github.event_name == 'push' && 'auto-admin' || inputs.account_setup }}"
           if ([string]::IsNullOrWhiteSpace($accountSetup)) { $accountSetup = 'auto-admin' }
 
           # Map the workflow toggles onto the profile's group names. Any group left
           # out here falls back to its default in config/gaming_profile.json.
           $gamingGroups = @{
-            atlas_power_scheme          = ("${{ github.event.inputs.atlas_power_scheme }}"          -eq 'true')
-            disable_cpu_idle            = ("${{ github.event.inputs.disable_cpu_idle }}"            -eq 'true')
-            disable_security_mitigations = ("${{ github.event.inputs.disable_security_mitigations }}" -eq 'true')
-            remove_xbox_gaming_stack    = ("${{ github.event.inputs.remove_xbox_gaming_stack }}"    -eq 'true')
-            strip_background_noise      = ("${{ github.event.inputs.strip_background_noise }}"      -eq 'true')
-            instant_windows             = ("${{ github.event.inputs.instant_windows }}"             -eq 'true')
-            disable_fast_startup        = ("${{ github.event.inputs.disable_fast_startup }}"        -eq 'true')
-            network_latency_tweaks      = ("${{ github.event.inputs.network_latency_tweaks }}"      -eq 'true')
-            disable_mpo                 = ("${{ github.event.inputs.disable_mpo }}"                 -eq 'true')
-            latency_input_tweaks        = ("${{ github.event.inputs.latency_input_tweaks }}"        -eq 'true')
-            interrupt_latency           = ("${{ github.event.inputs.interrupt_latency }}"           -eq 'true')
-            disable_fso                 = ("${{ github.event.inputs.disable_fso }}"                 -eq 'true')
-            disable_game_mode           = ("${{ github.event.inputs.disable_game_mode }}"           -eq 'true')
-            disable_printing            = ("${{ github.event.inputs.disable_printing }}"            -eq 'true')
+            atlas_power_scheme          = ("${{ github.event_name == 'push' && 'true' || inputs.atlas_power_scheme }}"          -eq 'true')
+            disable_cpu_idle            = ("${{ github.event_name == 'push' && 'true' || inputs.disable_cpu_idle }}"            -eq 'true')
+            disable_security_mitigations = ("${{ github.event_name == 'push' && 'true' || inputs.disable_security_mitigations }}" -eq 'true')
+            remove_xbox_gaming_stack    = ("${{ github.event_name == 'push' && 'true' || inputs.remove_xbox_gaming_stack }}"    -eq 'true')
+            strip_background_noise      = ("${{ github.event_name == 'push' && 'true' || inputs.strip_background_noise }}"      -eq 'true')
+            instant_windows             = ("${{ github.event_name == 'push' && 'true' || inputs.instant_windows }}"             -eq 'true')
+            disable_fast_startup        = ("${{ github.event_name == 'push' && 'true' || inputs.disable_fast_startup }}"        -eq 'true')
+            network_latency_tweaks      = ("${{ github.event_name == 'push' && 'true' || inputs.network_latency_tweaks }}"      -eq 'true')
+            disable_mpo                 = ("${{ github.event_name == 'push' && 'true' || inputs.disable_mpo }}"                 -eq 'true')
+            latency_input_tweaks        = ("${{ github.event_name == 'push' && 'true' || inputs.latency_input_tweaks }}"        -eq 'true')
+            interrupt_latency           = ("${{ github.event_name == 'push' && 'true' || inputs.interrupt_latency }}"           -eq 'true')
+            disable_fso                 = ("${{ github.event_name == 'push' && 'true' || inputs.disable_fso }}"                 -eq 'true')
+            disable_game_mode           = ("${{ github.event_name == 'push' && 'true' || inputs.disable_game_mode }}"           -eq 'true')
+            disable_printing            = ("${{ github.event_name == 'push' && 'true' || inputs.disable_printing }}"            -eq 'true')
           }
 
-          $hagsMode = "${{ github.event.inputs.hags }}"
+          $hagsMode = "${{ github.event_name == 'push' && 'on' || inputs.hags }}"
           if ([string]::IsNullOrWhiteSpace($hagsMode)) { $hagsMode = 'on' }
 
           Write-Output "=== Starting Tiny11 Core-Gaming Builder ==="
@@ -717,7 +717,7 @@ jobs:
           }
 
           if ([string]::IsNullOrWhiteSpace($buildNumber)) {
-            $buildNumber = "${{ github.event.inputs.windows_build }}"
+            $buildNumber = "${{ github.event_name == 'push' && '' || inputs.windows_build }}"
             if (-not [string]::IsNullOrWhiteSpace($buildNumber)) {
               Write-Output "Build number from workflow fallback input: $buildNumber"
             }
@@ -747,7 +747,7 @@ jobs:
             Write-Output "No gaming build info emitted - the gaming layer may not have run."
           }
 
-          $version = "${{ github.event.inputs.windows_version }}"
+          $version = "${{ github.event_name == 'push' && '26H2' || inputs.windows_version }}"
           $language = "$env:BUILD_LANGUAGE"
           $edition = "$env:EDITION_NAME"
           $date = "$env:BUILD_DATE"
@@ -786,18 +786,18 @@ jobs:
           Windows Build: $buildNumber
           Size: ${sizeGB}GB
           Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
-          Image Index: ${{ github.event.inputs.image_index }}
+          Image Index: ${{ github.event_name == 'push' && '1' || inputs.image_index }}
           Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
           BUILD TYPE: TINY11 CORE-GAMING (latency-first, AtlasOS-style)
-          WinRE: $(if ("${{ github.event.inputs.preserve_winre }}" -eq "true") { "Preserved" } else { "Removed (stub)" })
-          .NET 3.5: ${{ github.event.inputs.enable_dotnet35 }}
-          HAGS: ${{ github.event.inputs.hags }}
+          WinRE: $(if ("${{ github.event_name == 'push' && 'false' || inputs.preserve_winre }}" -eq "true") { "Preserved" } else { "Removed (stub)" })
+          .NET 3.5: ${{ github.event_name == 'push' && 'false' || inputs.enable_dotnet35 }}
+          HAGS: ${{ github.event_name == 'push' && 'on' || inputs.hags }}
 
           SECURITY FEATURES DISABLED
-            VBS / Memory Integrity / Credential Guard : ${{ github.event.inputs.disable_security_mitigations }}
-            Spectre / Meltdown mitigations             : ${{ github.event.inputs.disable_security_mitigations }}
-            Windows Defender removed                   : ${{ github.event.inputs.remove_defender }}
+            VBS / Memory Integrity / Credential Guard : ${{ github.event_name == 'push' && 'true' || inputs.disable_security_mitigations }}
+            Spectre / Meltdown mitigations             : ${{ github.event_name == 'push' && 'true' || inputs.disable_security_mitigations }}
+            Windows Defender removed                   : ${{ github.event_name == 'push' && 'false' || inputs.remove_defender }}
             Hypervisor (hypervisorlaunchtype)          : off
 
           Revert script inside the image:
@@ -844,16 +844,16 @@ jobs:
             --webhook "$env:DISCORD_WEBHOOK" `
             --type build-completed `
             --data (ConvertTo-Json @{
-              version = "${{ inputs.windows_version }}"
+              version = "${{ github.event_name == 'push' && '26H2' || inputs.windows_version }}"
               build_type = "Core-Gaming"
               edition = "$env:EDITION_NAME"
               duration = $duration
               iso_size = $isoSize
               download_url = "https://sourceforge.net/projects/tiny-11-releases/"
-              preserve_winre = "${{ inputs.preserve_winre }}"
-              enable_dotnet35 = "${{ inputs.enable_dotnet35 }}"
+              preserve_winre = "${{ github.event_name == 'push' && 'false' || inputs.preserve_winre }}"
+              enable_dotnet35 = "${{ github.event_name == 'push' && 'false' || inputs.enable_dotnet35 }}"
               gaming_profile = "core-gaming"
-              hags_mode = "${{ inputs.hags }}"
+              hags_mode = "${{ github.event_name == 'push' && 'on' || inputs.hags }}"
               windows_build = "$env:WINDOWS_BUILD_NUMBER"
             } -Compress)
         env:
@@ -1025,9 +1025,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          name: Tiny11 Core-Gaming Windows 11 ${{ github.event.inputs.windows_version }} - ${{ env.RELEASE_TAG }}
+          name: Tiny11 Core-Gaming Windows 11 ${{ github.event_name == 'push' && '26H2' || inputs.windows_version }} - ${{ env.RELEASE_TAG }}
           body: |
-            ## 🎮 Tiny11 Core-Gaming Windows 11 ${{ github.event.inputs.windows_version }}
+            ## 🎮 Tiny11 Core-Gaming Windows 11 ${{ github.event_name == 'push' && '26H2' || inputs.windows_version }}
 
             **Latency-first, AtlasOS-style build on top of Tiny11 Core.**
 
@@ -1045,9 +1045,9 @@ jobs:
             | **File** | ${{ env.ISO_NAME }} |
             | **Size** | ${{ env.ISO_SIZE_GB }}GB |
             | **Type** | Core-Gaming (latency-first) |
-            | **Base** | Windows 11 ${{ github.event.inputs.windows_version }} |
-            | **Index** | ${{ github.event.inputs.image_index }} |
-            | **HAGS** | ${{ github.event.inputs.hags }} |
+            | **Base** | Windows 11 ${{ github.event_name == 'push' && '26H2' || inputs.windows_version }} |
+            | **Index** | ${{ github.event_name == 'push' && '1' || inputs.image_index }} |
+            | **HAGS** | ${{ github.event_name == 'push' && 'on' || inputs.hags }} |
             | **WinRE** | ${{ github.event.inputs.preserve_winre == 'true' && 'Preserved' || 'Removed (stub)' }} |
 
             ### ⚡ Applied in this build
@@ -1120,9 +1120,9 @@ jobs:
           - **ISO:** $env:ISO_NAME
           - **Size:** $env:ISO_SIZE_GB GB
           - **Release:** ${{ env.RELEASE_TAG }}
-          - **Version:** ${{ github.event.inputs.windows_version }}
+          - **Version:** ${{ github.event_name == 'push' && '26H2' || inputs.windows_version }}
           - **Type:** Core-Gaming (latency-first, AtlasOS-style)
-          - **HAGS:** ${{ github.event.inputs.hags }}
+          - **HAGS:** ${{ github.event_name == 'push' && 'on' || inputs.hags }}
           - **WinRE:** ${{ github.event.inputs.preserve_winre == 'true' && 'Preserved' || 'Removed (stub)' }}
 
           ## 📥 Download
@@ -1192,14 +1192,14 @@ jobs:
             --webhook "$env:DISCORD_WEBHOOK" `
             --type build-failed `
             --data (ConvertTo-Json @{
-              version = "${{ inputs.windows_version }}"
+              version = "${{ github.event_name == 'push' && '26H2' || inputs.windows_version }}"
               build_type = "Core-Gaming"
               edition = "$env:EDITION_NAME"
               duration = $duration
               error = $env:BUILD_ERROR_SUMMARY
               logs_url = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
               gaming_profile = "core-gaming"
-              hags_mode = "${{ inputs.hags }}"
+              hags_mode = "${{ github.event_name == 'push' && 'on' || inputs.hags }}"
               windows_build = "$env:WINDOWS_BUILD_NUMBER"
             } -Compress)
         env:
